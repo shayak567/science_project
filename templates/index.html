@@ -1,0 +1,52 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Upload</title>
+</head>
+<body>
+    <h1>Camera Upload</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+
+                // Periodically capture and send frames every 0.5 seconds
+                setInterval(() => {
+                    // Draw the current frame from the video to the canvas
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Get base64-encoded image data from canvas
+                    const imageData = canvas.toDataURL('image/jpeg');
+
+                    // Send image data to the server only if 0.5 seconds have passed
+                    if (Date.now() % 1000 < 1001) {
+                        fetch('/upload', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: 'image=' + encodeURIComponent(imageData),
+                        })
+                            .then(response => response.text())
+                            .then(message => console.log(message))
+                            .catch(error => console.error('Error sending image data: ', error));
+                    }
+                }, 1000); // Capture and send a frame every 100 milliseconds
+            })
+            .catch((error) => {
+                console.error('Error accessing the camera: ', error);
+            });
+    </script>
+</body>
+</html>
